@@ -13,16 +13,34 @@ const chatSocket = require('./socket/chat.socket');
 
 const app = express();
 const httpServer = createServer(app);
+
+// Allow multiple origins for CORS
+const allowedOrigins = [
+  'http://localhost:4200',
+  'https://695aab0987f16e5c280591bb--curious-beignet-26cd5f.netlify.app',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:4200',
-    methods: ['GET', 'POST']
+    origin: allowedOrigins,
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 });
 
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:4200',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   credentials: true
 }));
 app.use(morgan('dev'));
